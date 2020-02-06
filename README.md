@@ -1,4 +1,4 @@
-# Foundations_of_Software_Engineering-Class_Project
+# Foundations of Software Engineering Class Project
 Class project for Foundations of Software Engineering EN.605.601.84.SP20
 
 This game is a simplified version of the popular board game, Clue®.  The main simplification is in the navigation of the game board.  In Clue-Less there are the same nine rooms, six weapons, and six people as in the board game.  The rules are pretty much the same except for moving from room to room.
