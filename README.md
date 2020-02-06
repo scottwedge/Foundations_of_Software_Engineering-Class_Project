@@ -7,11 +7,11 @@ This game is a simplified version of the popular board game, Clue®.  The main s
 * When it is your turn, you don’t need to roll a die.
 * Your options of moving are limited to the following:
   * If you are in a room, you may do one of the following:
-    − Move through one of the doors to the hallway (if it is not blocked).
-    − Take a secret passage to a diagonally opposite room (if there is one) and make a suggestion.
-    − If you were moved to the room by another player making a suggestion, you may, if you wish, stay in that room and make a suggestion. Otherwise you may move through a doorway or take a secret passage as described above.
+    * Move through one of the doors to the hallway (if it is not blocked).
+    * Take a secret passage to a diagonally opposite room (if there is one) and make a suggestion.
+    * If you were moved to the room by another player making a suggestion, you may, if you wish, stay in that room and make a suggestion. Otherwise you may move through a doorway or take a secret passage as described above.
   * If you are in a hallway, you must do the following:
-    − Move to one of the two rooms accessible from that hallway and make a suggestion.
+    * Move to one of the two rooms accessible from that hallway and make a suggestion.
 * If all of the exits are blocked (i.e., there are people in all of the hallways) and you are not in one of the corner rooms (with a secret passage), and you weren’t moved to the room by another player making a suggestion, you lose your turn (except for maybe making an accusation).
 * Your first move must be to the hallway that is adjacent to your home square.  The inactive characters stay in their home squares until they are moved to a room by someone making a suggestion.
 * Whenever a suggestion is made, the room must be the room the one making the suggestion is currently in.  The suspect in the suggestion is moved to the room in the suggestion.
