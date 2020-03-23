@@ -1,5 +1,5 @@
 class PlayerInterface:
-	def __init__(server_address=None):
+    def __init__(server_address=None):
         # connect to game room.
         pass
     
@@ -13,6 +13,9 @@ class PlayerInterface:
         pass
     
     def makeSuggestion():
+        pass
+        
+    def respondToSuggestion():
         pass
     
     def makeAccusation():

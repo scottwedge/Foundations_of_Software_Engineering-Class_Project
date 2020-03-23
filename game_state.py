@@ -10,14 +10,15 @@ class GameState:
         # player clients and the server
         self.GameServer = GameServer
 
-        while not GameServer.all_ready():
+        while not self.GameServer.all_ready():
             # Server object all_ready method checks if enough players are
             # connected and that they have all marked themselves ready to start
             sleep(15)
 
         # initialize list of players, with their chosen characters
-        self.player_list = random.shuffle(GameServer.get_player_list())
-        self.player_chars = {player:GameServer.getChar(player) for player in player_list}
+        self.player_list = self.GameServer.get_player_list()
+        random.shuffle(self.player_list)
+        self.player_chars = {player:self.GameServer.getChar(player) for player in player_list}
         self.char_players = {v:k for k, v in player_chars.items()}
         self.player_hands = {p:[] for p in player_list}
 
@@ -51,6 +52,16 @@ class GameState:
         # deal out cards to players
         cards = rooms+weapons+suspects
         random.shuffle(cards)
+        
+        # add solution cards back to reference lists
+        rooms.append(solution['room'])
+        weapons.append(solution['weapon'])
+        suspects.append(solution['suspect'])
+        self.rooms = rooms
+        self.hallways = hallways
+        self.weapons = weapons
+        self.suspects = suspects
+        
         while len(cards)>0:
             for player in self.player_list:
                 try:
@@ -58,21 +69,106 @@ class GameState:
                 except IndexError as e:
                     break
         
-        # initial player is always Miss Scarlet
-        self.current_player = 'Miss Scarlet'
-        self.turn_counter = 1
-    
-    def process_player_move(move_type, move_info):
-        if move_type=='checkAvailableMoves':
+        # initial player is always Miss Scarlet, if no Miss Scarlet, then
+        # use random player order
+        self.character_order = list(char_players.keys())
+        random.shuffle(self.character_order)
+        if 'Miss Scarlet' in character_order:
+            self.current_character = 'Miss Scarlet'
+            character_order.remove('Miss Scarlet')
+            character_order.insert(0,'Miss Scarlet')
+            self.turn_counter = 0
+        self.player_order = [char_players[c] for c in character_order]
+        self.current_player = char_players[current_character]
+
+    def process_player_action(action_info):
+        '''
+        Evaluates the player action that was received by the server from the
+        player client.  Either rejects it if it is an invalid action, or
+        acccepts it if it is valid, in which case it prepares a response dict.
+        '''
+        action_type = action_info['action_type']
+        character = action_info['character']
+        player = action_info['player']
+        resp = {'status':'Completed','character':character,'player':player}
+
+        if 'check' not in action_type and (character!=self.current_character or player!=self.current_player):
+            resp['status'] = 'Rejected'
+            resp['message'] = 'It\'s not your turn!'
+            return resp
+
+        if action_type=='checkAvailableMoves':
+            loc = self.game_board.player_locs[character]
+            possible_moves = self.game_board.nodes[loc]
+            allowed_moves = []
+            for move in possible_moves:
+                if self.game_board.remaining_space[move]>0:
+                    allowed_moves.append(str(move))
+            resp['message'] = 'Possible Moves:\n'+'\n'.join(allowed_moves)
+            return resp
+        elif action_type=='checkHand':
+            resp['message'] = '\n'.join(player_hands[player])
+            return resp
+        elif action_type=='makeSuggestion':
+            loc = self.game_board.player_locs[character]
+            if loc in self.hallways:
+                resp['status'] = 'Rejected'
+                resp['message'] = 'The murder did not occur in a hallway, so you cannot make a suggestion here'
+                return resp
+
+            weapon = action_info['weapon']
+            suspect = action_info['suspect']
+            self.game_board.move_char(suspect, loc)
+            
+            message = character+' has suggested that '+suspect+' performed the murder in the '+loc+' using the '+weapon
+            self.GameServer.broadcast({'recipients':'all','message_type':'announcement','message':message})
+            cardlist = [weapon, suspect, loc]
+            for responder, hand in player_hands.items():
+                intersection = _intersection(hand, cardlist)
+                if len(intersection)==0:
+                    self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' does not have any cards which refute the suggestion of '+player})
+                elif len(intersection)==1:
+                    refutation = intersection[0]
+                    self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' has the card '+refutation+' which refutes the suggestion of '+player})
+                elif len(intersection)>=2:
+                    self.GameServer.broadcast({'recipients':responder,'message_type':'prompt_suggestion_response','message':'you have multiple cards which can refute the suggestion, pick one to show to '+player})
+
+            # every player must either acknowledge the response above, or if
+            # has multiple cards, select one card to show. Information is not
+            # disclosed until all other players have acknowledged or responded.
+            awaiting_player_response = {p:True for p in player_list if p!=player}
+            while(any(awaiting_player_response.values())):
+                sugg_resps, awaiting_player_response = self.GameServer.get_sugg_resps()
+                sleep(10)
+            
+            message = 'Each player responded in the following way:\n'
+            for player, r in sugg_resps:
+                message = message+player+': '+r
+            resp['message'] = message
+            return resp
+            # TODO: fill out gameserver code, player interface, to make suggestion response section above make sense. Then use as template for remaining game state options.
+
+        elif action_type=='makeAccusation':
             pass
-        elif move_type=='checkHand':
-            pass
-        elif move_type=='makeSuggestion':
-            pass
-        elif move_type=='makeAccusation':
-            pass
-        elif move_type=='moveChar':
-            pass
+        elif action_type=='moveChar':
+            loc = self.game_board.player_locs[character]
+            destination = action_info['destination']
+            if destination not in self.game_board.nodes[loc]:
+                resp['status'] = 'Rejected'
+                resp['message'] = 'You cannot reach that location from your current location'
+            elif self.game_board.remaining_space[destination]==0:
+                resp['status'] = 'Rejected'
+                resp['message'] = 'That location has no room, you cannot move there'
+            else:
+                self.game_board.move_char(character,destination)
+
+    def rollover_turn():
+        self.turn_counter += 1
+        self.current_character = character_order[turn_counter % len(character_order)]
+        self.current_player = player_order[turn_counter % len(player_order)]
+        
+    def _intersection(lst1, lst2):
+        return list(set(lst1) & set(lst2))
 
 class GameBoard:
     def __init__(rooms, hallways, secret_passages, players, player_chars):
@@ -92,7 +188,7 @@ class GameBoard:
                             'Mrs. Peacock': ('Library', 'Conservatory'),
                             'Mr. Green': ('Conservatory', 'Ballroom'),
                             'Mrs. White': ('Ballroom', 'Kitchen')}
-        for p,r in self.player_locs:
+        for p, r in self.player_locs:
             self.remaining_space[r]-=1
 
         for hallway in hallways:
@@ -104,10 +200,10 @@ class GameBoard:
             self.nodes[hallway[1]].append(hallway)
             self.nodes[hallway].append(hallway[1])
             
-            self.edges.extend(secret_passages)
-            for sp in secret_passages:
-                self.nodes[sp[0]].append(sp[1])
-                self.nodes[sp[1]].append(sp[0])
+        self.edges.extend(secret_passages)
+        for sp in secret_passages:
+            self.nodes[sp[0]].append(sp[1])
+            self.nodes[sp[1]].append(sp[0])
     
     def move_char(char,new_room):
         # at present presumes that validity of the move is already verified
