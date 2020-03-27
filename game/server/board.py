@@ -1,6 +1,4 @@
-"""
-Defines initial game board and prepares it for play.
-"""
+"""Defines initial game board and prepares it for play."""
 
 SUSPECTS = [
     "Colonel Mustard",
