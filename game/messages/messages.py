@@ -29,7 +29,9 @@ class MessageInterface:
     def process_message(serialdata):
         """Deserialize data and prepare a python object."""
         msg = Message()
-        msg = json.loads(serialdata)
+        obj = json.loads(serialdata)
+        msg.function = obj.function
+        msg.data = obj.function
         return msg
 
 
