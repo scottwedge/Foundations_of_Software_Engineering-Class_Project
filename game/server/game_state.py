@@ -15,7 +15,7 @@ class GameState:
         # initialize list of players, with their chosen characters
         self.player_list = self.GameServer.get_player_list(self)
         random.shuffle(self.player_list)
-        self.player_chars = {player:self.GameServer.get_character(player) for player in self.player_list}
+        self.player_chars = {player:self.GameServer.get_character(self,player) for player in self.player_list}
         self.char_players = {v:k for k, v in self.player_chars.items()}
         self.player_hands = {p:[] for p in self.player_list}
 

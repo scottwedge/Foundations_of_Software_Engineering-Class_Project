@@ -6,7 +6,7 @@ import asyncore
 HOST, PORT = "localhost", 9999
 connections = []
 player_list = {
-    "nick": "Colonel Mustard",   # Dummy value
+    "nick": "Miss Scarlet",   # Dummy value
 }
 turn = b""
 cycler = cycle(player_list)
