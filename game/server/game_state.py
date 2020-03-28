@@ -1,11 +1,10 @@
 from server import *
 from client import *
-from player_interface import *
 from time import sleep
 import random
 
 class GameState:
-    def __init__(GameServer):
+    def __init__(self, GameServer):
         # the Server object manages all incoming and outgoing messages between
         # player clients and the server
         self.GameServer = GameServer
@@ -18,9 +17,9 @@ class GameState:
         # initialize list of players, with their chosen characters
         self.player_list = self.GameServer.get_player_list()
         random.shuffle(self.player_list)
-        self.player_chars = {player:self.GameServer.getChar(player) for player in player_list}
-        self.char_players = {v:k for k, v in player_chars.items()}
-        self.player_hands = {p:[] for p in player_list}
+        self.player_chars = {player:self.GameServer.getChar(player) for player in self.player_list}
+        self.char_players = {v:k for k, v in self.player_chars.items()}
+        self.player_hands = {p:[] for p in self.player_list}
 
         # shuffle decks
         rooms = ['Study', 'Hall', 'Lounge', 'Library', 'Billiard Room',
@@ -54,9 +53,9 @@ class GameState:
         random.shuffle(cards)
         
         # add solution cards back to reference lists
-        rooms.append(solution['room'])
-        weapons.append(solution['weapon'])
-        suspects.append(solution['suspect'])
+        rooms.append(self.solution['room'])
+        weapons.append(self.solution['weapon'])
+        suspects.append(self.solution['suspect'])
         self.rooms = rooms
         self.hallways = hallways
         self.weapons = weapons
@@ -71,17 +70,17 @@ class GameState:
         
         # initial player is always Miss Scarlet, if no Miss Scarlet, then
         # use random player order
-        self.character_order = list(char_players.keys())
+        self.character_order = list(self.char_players.keys())
         random.shuffle(self.character_order)
-        if 'Miss Scarlet' in character_order:
+        if 'Miss Scarlet' in self.character_order:
             self.current_character = 'Miss Scarlet'
-            character_order.remove('Miss Scarlet')
-            character_order.insert(0,'Miss Scarlet')
+            self.character_order.remove('Miss Scarlet')
+            self.character_order.insert(0,'Miss Scarlet')
             self.turn_counter = 0
-        self.player_order = [char_players[c] for c in character_order]
-        self.current_player = char_players[current_character]
+        self.player_order = [self.char_players[c] for c in self.character_order]
+        self.current_player = self.char_players[self.current_character]
 
-    def process_player_action(action_info):
+    def process_player_action(self,action_info):
         '''
         Evaluates the player action that was received by the server from the
         player client.  Either rejects it if it is an invalid action, or
@@ -107,7 +106,7 @@ class GameState:
             resp['message'] = 'Possible Moves:\n'+'\n'.join(allowed_moves)
             return resp
         elif action_type=='checkHand':
-            resp['message'] = '\n'.join(player_hands[player])
+            resp['message'] = '\n'.join(self.player_hands[player])
             return resp
         elif action_type=='makeSuggestion':
             loc = self.game_board.player_locs[character]
@@ -123,8 +122,8 @@ class GameState:
             message = character+' has suggested that '+suspect+' performed the murder in the '+loc+' using the '+weapon
             self.GameServer.broadcast({'recipients':'all','message_type':'announcement','message':message})
             cardlist = [weapon, suspect, loc]
-            for responder, hand in player_hands.items():
-                intersection = _intersection(hand, cardlist)
+            for responder, hand in self.player_hands.items():
+                intersection = self._intersection(hand, cardlist)
                 if len(intersection)==0:
                     self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' does not have any cards which refute the suggestion of '+player})
                 elif len(intersection)==1:
@@ -136,7 +135,7 @@ class GameState:
             # every player must either acknowledge the response above, or if
             # has multiple cards, select one card to show. Information is not
             # disclosed until all other players have acknowledged or responded.
-            awaiting_player_response = {p:True for p in player_list if p!=player}
+            awaiting_player_response = {p:True for p in self.player_list if p!=player}
             while(any(awaiting_player_response.values())):
                 sugg_resps, awaiting_player_response = self.GameServer.get_sugg_resps()
                 sleep(10)
@@ -162,16 +161,16 @@ class GameState:
             else:
                 self.game_board.move_char(character,destination)
 
-    def rollover_turn():
+    def rollover_turn(self):
         self.turn_counter += 1
-        self.current_character = character_order[turn_counter % len(character_order)]
-        self.current_player = player_order[turn_counter % len(player_order)]
+        self.current_character = self.character_order[self.turn_counter % len(self.character_order)]
+        self.current_player = self.player_order[self.turn_counter % len(self.player_order)]
         
-    def _intersection(lst1, lst2):
+    def _intersection(self, lst1, lst2):
         return list(set(lst1) & set(lst2))
 
 class GameBoard:
-    def __init__(rooms, hallways, secret_passages, players, player_chars):
+    def __init__(self,rooms, hallways, secret_passages, players, player_chars, char_players):
         # GameBoard class is basically a Graph class that's already implemented
         # pretty well in networkx library. TBD whether it would be better to
         # use that library or this instead.  Most of the verbiage below
@@ -188,6 +187,7 @@ class GameBoard:
                             'Mrs. Peacock': ('Library', 'Conservatory'),
                             'Mr. Green': ('Conservatory', 'Ballroom'),
                             'Mrs. White': ('Ballroom', 'Kitchen')}
+        self.char_players = char_players
         for p, r in self.player_locs:
             self.remaining_space[r]-=1
 
@@ -205,7 +205,7 @@ class GameBoard:
             self.nodes[sp[0]].append(sp[1])
             self.nodes[sp[1]].append(sp[0])
     
-    def move_char(char,new_room):
+    def move_char(self, char,new_room):
         # at present presumes that validity of the move is already verified
         self.remaining_space[self.player_locs[char]]+=1
         self.player_locs[char] = new_room
