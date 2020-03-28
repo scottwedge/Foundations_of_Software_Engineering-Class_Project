@@ -1,5 +1,3 @@
-from server import *
-from client import *
 from time import sleep
 import random
 
@@ -9,15 +7,15 @@ class GameState:
         # player clients and the server
         self.GameServer = GameServer
 
-        while not self.GameServer.all_ready():
+        #while not self.GameServer.all_ready():
             # Server object all_ready method checks if enough players are
             # connected and that they have all marked themselves ready to start
-            sleep(15)
+        #    sleep(15)
 
         # initialize list of players, with their chosen characters
-        self.player_list = self.GameServer.get_player_list()
+        self.player_list = self.GameServer.get_player_list(self)
         random.shuffle(self.player_list)
-        self.player_chars = {player:self.GameServer.getChar(player) for player in self.player_list}
+        self.player_chars = {player:self.GameServer.get_character(player) for player in self.player_list}
         self.char_players = {v:k for k, v in self.player_chars.items()}
         self.player_hands = {p:[] for p in self.player_list}
 
@@ -188,9 +186,9 @@ class GameBoard:
                             'Mr. Green': ('Conservatory', 'Ballroom'),
                             'Mrs. White': ('Ballroom', 'Kitchen')}
         self.char_players = char_players
-        for p, r in self.player_locs:
+        for r  in self.player_locs.values():
             self.remaining_space[r]-=1
-
+        print(self.remaining_space)
         for hallway in hallways:
             self.edges.append((hallway[0],hallway))
             self.nodes[hallway[0]].append(hallway)

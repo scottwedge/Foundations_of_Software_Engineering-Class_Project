@@ -1,5 +1,6 @@
 """Defines server architecture."""
 from itertools import cycle
+from game_state import GameState
 import socket
 import asyncore
 HOST, PORT = "localhost", 9999
@@ -7,6 +8,7 @@ connections = []
 player_list = []
 turn = b""
 cycler = cycle(player_list)
+ready = False
 class Server(asyncore.dispatcher):
     def __init__(self, ip, port):
         asyncore.dispatcher.__init__(self)
@@ -25,16 +27,24 @@ class Server(asyncore.dispatcher):
             turn = new_name
         PlayerServer(connection)
 
+    def get_player_list(self):
+        return player_list
+
+    def get_character(self, name):
+        return player_list["name"]
+
 class PlayerServer(asyncore.dispatcher_with_send):
     def handle_read(self):
         global turn
         global cycler
+        global ready
         data = self.recv(1)
         if data == b"?":
             print("query")   # inside this branch, we would check in the future whether the move is valid or not. 
-            self.send(turn)
+            self.send(turn)  # instead of sending just whos turn it is here, send whole game state. 
         elif data == b"!": 
             print("start")
+            ready = True
             print(player_list)
             cycler = cycle(player_list)
         elif data == b"T":
@@ -45,9 +55,10 @@ class PlayerServer(asyncore.dispatcher_with_send):
         else: self.close()
 
 if __name__ == "__main__":
-    # Create the server, binding to localhost on port 9999
+    # Create the server, binding to localhost on port 4444
     try:
         Server(HOST, PORT)
+        GameState(Server)
         asyncore.loop()
     except KeyboardInterrupt:
         print("Caught exit!")
