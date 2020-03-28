@@ -11,6 +11,7 @@ player_list = {
 turn = b""
 cycler = cycle(player_list)
 ready = False
+status = dict()
 class Server(asyncore.dispatcher):
     def __init__(self, ip, port):
         asyncore.dispatcher.__init__(self)
@@ -35,8 +36,14 @@ class Server(asyncore.dispatcher):
     def get_character(self, name):
         return player_list[name]
 
+    def broadcast(self, status):    # for now just store a dict that is returned when queried. 
+        global status
+        status = status
+    
+
 class PlayerServer(asyncore.dispatcher_with_send):
     def handle_read(self):
+        global gs
         global turn
         global cycler
         global ready
@@ -44,6 +51,7 @@ class PlayerServer(asyncore.dispatcher_with_send):
         if data == b"?":
             print("query")   # inside this branch, we would check in the future whether the move is valid or not. 
             self.send(turn)  # instead of sending just whos turn it is here, send whole game state. 
+            #self.send(status) # do this when logic exists
         elif data == b"!": 
             print("start")
             ready = True
@@ -53,6 +61,7 @@ class PlayerServer(asyncore.dispatcher_with_send):
             print("turn")
             self.recv(5)
             self.send(bytes("V", "utf-8"))
+            gs.process_player_action("") # idk format yet
             turn = next(cycler)
         else: self.close()
 
@@ -60,7 +69,7 @@ if __name__ == "__main__":
     # Create the server, binding to localhost on port 4444
     try:
         Server(HOST, PORT)
-        GameState(Server)
+        gs = GameState(Server)
         asyncore.loop()
     except KeyboardInterrupt:
         print("Caught exit!")
