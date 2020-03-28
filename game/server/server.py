@@ -5,7 +5,9 @@ import socket
 import asyncore
 HOST, PORT = "localhost", 9999
 connections = []
-player_list = []
+player_list = {
+    "nick": "Colonel Mustard",   # Dummy value
+}
 turn = b""
 cycler = cycle(player_list)
 ready = False
@@ -22,7 +24,7 @@ class Server(asyncore.dispatcher):
         connections.append(connection)
         new_name = connection.recv(4) # todo change to be length of name
         print("Player {} connected".format(new_name))
-        player_list.append(new_name)
+        player_list[new_name] = "TEMP NAME WHATEVER THEY INPUT"
         if turn == b"":
             turn = new_name
         PlayerServer(connection)
@@ -31,7 +33,7 @@ class Server(asyncore.dispatcher):
         return player_list
 
     def get_character(self, name):
-        return player_list["name"]
+        return player_list[name]
 
 class PlayerServer(asyncore.dispatcher_with_send):
     def handle_read(self):
