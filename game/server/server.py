@@ -3,7 +3,7 @@ from itertools import cycle
 from game_state import GameState
 import sys
 sys.path.append('../messages')
-from messages import Message, MessageInterface, REGISTER, QUERY, START, TURN, MOVE
+from messages import Message, MessageInterface, REGISTER, QUERY, START, TURN, MOVE, GUESS, ACCUSE
 import socket
 import struct
 import asyncore
@@ -73,7 +73,8 @@ class PlayerServer(asyncore.dispatcher_with_send):
             ready = True
             print(player_list)
             cycler = cycle(player_list)
-        elif data["function"] == MOVE:
+        elif data["function"] == MOVE or  data["function"] == GUESS or  data["function"] == ACCUSE: 
+            print("Turn was {}".format(data["function"]))
             print(data["data"])
             #gs.process_player_action("") # idk format yet
             turn = next(cycler)

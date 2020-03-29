@@ -5,7 +5,7 @@ import socket
 import sys
 import time
 sys.path.append('../messages')
-from messages import Message, MessageInterface, MOVE
+from messages import Message, MessageInterface, MOVE, ACCUSE, GUESS
 
 class PlayerInterface:
     """Class that creates/processes actions for the player."""
@@ -14,10 +14,19 @@ class PlayerInterface:
         self.name = name
 
     def take_turn(self):
-        action = input("It is your turn!\nSelect from the following: Move, Guess, Accusation\n")
+        action = input("It is your turn!\nSelect from the following: Move, Guess, Accuse\n")
         # TODO check to see if the user input is a valid option ("move", "guess", "accusation")
         # if move, process move, if guess, process guess, if accusation, process accusation
-        return MessageInterface.create_message(MOVE, action)
+        if "MOVE" in action.upper():
+            function = MOVE
+        elif "GUESS" in action.upper():
+            function = GUESS
+        elif "ACCUSE" in action.upper():
+            function = ACCUSE
+        else:
+            print("Invalid choice, try again")
+            return self.take_turn()    # this is the worst hack of all time
+        return MessageInterface.create_message(function, action)
 
     def process_text(self, msg):
         print("text message")

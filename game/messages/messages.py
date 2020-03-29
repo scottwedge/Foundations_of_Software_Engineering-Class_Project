@@ -13,7 +13,7 @@ TURN = 7
 REGISTER = 8
 QUERY = 9
 START = 10
-
+GUESS = 11
 
 class MessageInterface:
     """Provides functionality to create and use messages."""
