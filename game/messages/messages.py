@@ -10,6 +10,8 @@ MOVE = 4
 UPDATE = 5
 DISPLAY = 6
 TURN = 7
+REGISTER = 8
+QUERY = 9
 
 
 class MessageInterface:
@@ -26,12 +28,12 @@ class MessageInterface:
         return json.dumps(msg.__dict__)
 
     @staticmethod
-    def process_message(serialdata):
+    def process_message(serialdata, query=False):
         """Deserialize data and prepare a python object."""
         msg = Message()
         obj = json.loads(serialdata)
-        msg.function = obj.function
-        msg.data = obj.function
+        if query:
+            msg.data = obj["turn"]
         return msg
 
 

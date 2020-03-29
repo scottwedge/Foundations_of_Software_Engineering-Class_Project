@@ -2,12 +2,13 @@
 """
 import select
 import socket
+import struct
 import sys
 import time
 import ast
 from playerInterface import PlayerInterface
 sys.path.append('../messages')
-from messages import MessageInterface
+from messages import MessageInterface, REGISTER, QUERY
 from messages import Message
 
 class Client:
@@ -22,15 +23,23 @@ class Client:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             # Connect to server and send player name
             sock.connect((self.HOST, self.PORT))
-            sock.sendall(bytes(player_name, "utf-8"))
-            sock.sendall(b"!")
+            register_msg = MessageInterface.create_message(REGISTER, player_name)
+            print(register_msg)
+            sock.sendall(struct.pack("!I", len(bytes(register_msg, "utf-8"))))
+            sock.sendall(bytes(register_msg, "utf-8"))
             while sock:
+                query_msg = MessageInterface.create_message(QUERY, "")
+                print(query_msg)
+                sock.sendall(struct.pack("!I", len(bytes(query_msg, "utf-8"))))
+                sock.sendall(bytes(query_msg, "utf-8"))
                 msg = sock.recv(1024)
                 buf = msg.decode()
+                print(buf)
                 # TODO two process_message functions - naming is off
-                buf = MessageInterface.process_message(buf)
-                rsp = self.player_interface.process_msg(buf)
+                buf = MessageInterface.process_message(buf, query=True)
+                rsp = self.player_interface.process_msg(buf, query=True)
                 if rsp != None:
+                    sock.sendall(struct.pack("!I", len(bytes(rsp))))
                     sock.sendall(bytes(rsp, "utf-8"))
                     print("Message sent!")
                 print("Waiting for next message from server")

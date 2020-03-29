@@ -11,7 +11,7 @@ class PlayerInterface:
     """Class that creates/processes actions for the player."""
     def __init__(self, name=None):
         print("initialized")
-        self.name = "temp"
+        self.name = name
 
     def take_turn(self):
         action = input("It is your turn!\nSelect from the following: Move, Guess, Accusation\n")
@@ -29,11 +29,13 @@ class PlayerInterface:
 
     # return message to be sent to game server
     # msg - message class obj
-    def process_msg(self, msg):
+    def process_msg(self, msg, query=False):
         print("process msg")
         rsp = None
         #process the type
-        if msg.function == 7:
+        print(self.name)
+        print(msg.data)
+        if msg.data in self.name and query:
             rsp = self.take_turn()
         elif msg.function == 6:
             rsp = self.process_text(msg)

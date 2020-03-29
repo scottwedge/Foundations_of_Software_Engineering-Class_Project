@@ -1,8 +1,13 @@
 """Defines server architecture."""
 from itertools import cycle
 from game_state import GameState
+import sys
+sys.path.append('../messages')
+from messages import Message, MessageInterface, REGISTER, QUERY
 import socket
+import struct
 import asyncore
+import json
 HOST, PORT = "localhost", 9999
 connections = []
 player_list = {
@@ -23,7 +28,13 @@ class Server(asyncore.dispatcher):
         global turn
         print(ip)
         connections.append(connection)
-        new_name = connection.recv(4) # todo change to be length of name
+        data = connection.recv(4)
+        (length,) = struct.unpack("!I", data)
+        print(length)
+        data = connection.recv(length).decode('utf8')
+        data = json.loads(data)
+        print(data)
+        new_name = data["data"]
         print("Player {} connected".format(new_name))
         player_list[new_name] = "TEMP NAME WHATEVER THEY INPUT"
         if turn == b"":
@@ -47,10 +58,15 @@ class PlayerServer(asyncore.dispatcher_with_send):
         global turn
         global cycler
         global ready
-        data = self.recv(1)
-        if data == b"?":
+        data = self.recv(4)
+        (length,) = struct.unpack("!I", data)
+        print(length)
+        data = self.recv(length).decode('utf8')
+        data = json.loads(data)
+        print(data)
+        if data["function"] == QUERY:
             print("query")   # inside this branch, we would check in the future whether the move is valid or not. 
-            self.send(turn)  # instead of sending just whos turn it is here, send whole game state. 
+            self.send(b'{"turn":"nick"}')  # instead of sending just whos turn it is here, send whole game state. 
             #self.send(status) # do this when logic exists
         elif data == b"!": 
             print("start")
