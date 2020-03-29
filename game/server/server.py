@@ -38,7 +38,7 @@ class Server(asyncore.dispatcher):
 
     def broadcast(self, new_status):    # for now just store a dict that is returned when queried. 
         global status
-        status = new+status
+        status = new_status
     
 
 class PlayerServer(asyncore.dispatcher_with_send):
