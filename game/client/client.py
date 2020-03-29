@@ -38,8 +38,9 @@ class Client:
                 # TODO two process_message functions - naming is off
                 buf = MessageInterface.process_message(buf, query=True)
                 rsp = self.player_interface.process_msg(buf, query=True)
+                print(rsp)
                 if rsp != None:
-                    sock.sendall(struct.pack("!I", len(bytes(rsp))))
+                    sock.sendall(struct.pack("!I", len(bytes(rsp, "utf-8"))))
                     sock.sendall(bytes(rsp, "utf-8"))
                     print("Message sent!")
                 print("Waiting for next message from server")

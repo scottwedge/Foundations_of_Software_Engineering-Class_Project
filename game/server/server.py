@@ -3,7 +3,7 @@ from itertools import cycle
 from game_state import GameState
 import sys
 sys.path.append('../messages')
-from messages import Message, MessageInterface, REGISTER, QUERY
+from messages import Message, MessageInterface, REGISTER, QUERY, START, TURN, MOVE
 import socket
 import struct
 import asyncore
@@ -68,16 +68,14 @@ class PlayerServer(asyncore.dispatcher_with_send):
             print("query")   # inside this branch, we would check in the future whether the move is valid or not. 
             self.send(b'{"turn":"nick"}')  # instead of sending just whos turn it is here, send whole game state. 
             #self.send(status) # do this when logic exists
-        elif data == b"!": 
+        elif data["function"] == START: 
             print("start")
             ready = True
             print(player_list)
             cycler = cycle(player_list)
-        elif data == b"T":
-            print("turn")
-            self.recv(5)
-            self.send(bytes("V", "utf-8"))
-            gs.process_player_action("") # idk format yet
+        elif data["function"] == MOVE:
+            print(data["data"])
+            #gs.process_player_action("") # idk format yet
             turn = next(cycler)
         else: self.close()
 

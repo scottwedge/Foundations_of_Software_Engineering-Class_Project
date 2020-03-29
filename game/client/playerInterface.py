@@ -5,7 +5,7 @@ import socket
 import sys
 import time
 sys.path.append('../messages')
-from messages import Message
+from messages import Message, MessageInterface, MOVE
 
 class PlayerInterface:
     """Class that creates/processes actions for the player."""
@@ -17,7 +17,7 @@ class PlayerInterface:
         action = input("It is your turn!\nSelect from the following: Move, Guess, Accusation\n")
         # TODO check to see if the user input is a valid option ("move", "guess", "accusation")
         # if move, process move, if guess, process guess, if accusation, process accusation
-        return action
+        return MessageInterface.create_message(MOVE, action)
 
     def process_text(self, msg):
         print("text message")
