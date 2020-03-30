@@ -1,15 +1,13 @@
-"""
-"""
-import select
-import socket
-import sys
-import time
-sys.path.append('../messages')
-from messages import Message, MessageInterface, MOVE, ACCUSE, GUESS
+"""Interface to support player actions."""
+
+from game.messages.messages import MessageInterface, MOVE, ACCUSE, GUESS
+
 
 class PlayerInterface:
     """Class that creates/processes actions for the player."""
+
     def __init__(self, name=None):
+        """Initialize PlayerInterface."""
         print("initialized")
         self.name = name
 

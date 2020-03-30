@@ -22,7 +22,7 @@ class MessageInterface:
 
     @staticmethod
     def create_message(function: int, data: object):
-        """Create a new message and serialize its content."""
+        """Create a new message object and serialize its content."""
         msg = Message(function, data)
 
         # Serialize the object into the form {"x": 1, "y": 2}

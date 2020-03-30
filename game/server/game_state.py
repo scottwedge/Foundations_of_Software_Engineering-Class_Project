@@ -168,7 +168,7 @@ class GameState:
         return list(set(lst1) & set(lst2))
 
 class GameBoard:
-    def __init__(self,rooms, hallways, secret_passages, players, player_chars, char_players):
+    def __init__(self, rooms, hallways, secret_passages, players, player_chars, char_players):
         # GameBoard class is basically a Graph class that's already implemented
         # pretty well in networkx library. TBD whether it would be better to
         # use that library or this instead.  Most of the verbiage below
