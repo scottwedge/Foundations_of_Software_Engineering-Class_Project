@@ -1,7 +1,7 @@
 """Interface to support player actions."""
 
 import logging
-
+import time
 from game.messages.messages import MessageInterface, MOVE, ACCUSE, GUESS
 
 logger = logging.getLogger(__name__)
@@ -44,10 +44,10 @@ class PlayerInterface:
         print("process msg")
         rsp = None
         #process the type
-        print(self.name)
-        print(msg.data)
         if msg.data in self.name and query:
             rsp = self.take_turn()
+        elif query:
+            time.sleep(1) 
         elif msg.function == 6:
             rsp = self.process_text(msg)
         else:
