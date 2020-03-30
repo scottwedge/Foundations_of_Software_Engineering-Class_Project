@@ -72,7 +72,7 @@ class PlayerServer(asyncore.dispatcher_with_send):
         print(data)
         if data["function"] == QUERY:
             print("query")   # inside this branch, we would check in the future whether the move is valid or not. 
-            self.send(b'{"turn":"nick"}')  # instead of sending just whos turn it is here, send whole game state. 
+            self.send(b'{"turn":"%b"}' % turn.encode())  # instead of sending just whos turn it is here, send whole game state. 
             #self.send(status) # do this when logic exists
         elif data["function"] == START: 
             print("start")
