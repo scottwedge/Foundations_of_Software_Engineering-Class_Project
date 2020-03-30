@@ -3,20 +3,18 @@
 import json
 
 # Message functions
-FUNCTIONS = {
-    "NULL": 0,
-    "SUGGEST": 1,
-    "ACCUSE": 2,
-    "REFUTE": 3,
-    "MOVE": 4,
-    "UPDATE": 5,
-    "DISPLAY": 6,
-    "TURN": 7,
-    "REGISTER": 8,
-    "QUERY": 9,
-    "START": 10,
-    "GUESS": 11
-}
+NULL = 0
+SUGGEST = 1
+ACCUSE = 2
+REFUTE = 3
+MOVE = 4
+UPDATE = 5
+DISPLAY = 6
+TURN = 7
+REGISTER = 8
+QUERY = 9
+START = 10
+GUESS = 11
 
 
 class MessageInterface:
