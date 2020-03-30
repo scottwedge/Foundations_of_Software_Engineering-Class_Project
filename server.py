@@ -4,10 +4,14 @@ import socket
 import struct
 import asyncore
 import json
+import logging
+import sys
 from itertools import cycle
 
 from game.server.game_state import GameState
 from game.messages.messages import QUERY, START, MOVE, GUESS, ACCUSE
+
+logger = logging.getLogger(__name__)
 
 
 HOST, PORT = "localhost", 9999
@@ -83,6 +87,12 @@ class PlayerServer(asyncore.dispatcher_with_send):
         else: self.close()
 
 if __name__ == "__main__":
+
+    # Set optional verbose debugging level
+    logger.setLevel(logging.CRITICAL)
+    if len(sys.argv) > 1 and sys.argv[1] == "-V":
+        logger.setLevel(logging.DEBUG)
+
     # Create the server, binding to localhost on port 4444
     try:
         Server(HOST, PORT)

@@ -1,4 +1,13 @@
 # Foundations of Software Engineering Class Project
+
+## Usage notes
+Run the following (Python 3.7.2+):
+$ python server.py
+
+And on a separate terminal:
+$ python client.py
+
+## Requirements
 Class project for Foundations of Software Engineering EN.605.601.84.SP20
 
 This game is a simplified version of the popular board game, Clue®.  The main simplification is in the navigation of the game board.  In Clue-Less there are the same nine rooms, six weapons, and six people as in the board game.  The rules are pretty much the same except for moving from room to room.

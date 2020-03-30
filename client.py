@@ -2,9 +2,14 @@
 
 import socket
 import struct
-from game.client.playerInterface import PlayerInterface
+import logging
+import sys
 
+from game.client.player_interface import PlayerInterface
 from game.messages.messages import MessageInterface, REGISTER, QUERY
+
+logger = logging.getLogger(__name__)
+
 
 class Client:
     def __init__(self):
@@ -41,5 +46,11 @@ class Client:
                 print("Waiting for next message from server")
 
 if __name__ == "__main__":
+
+    # Set optional verbose debugging level
+    logger.setLevel(logging.CRITICAL)
+    if len(sys.argv) > 1 and sys.argv[1] == "-V":
+        logger.setLevel(logging.DEBUG)
+
     client = Client()
     client.startup()
