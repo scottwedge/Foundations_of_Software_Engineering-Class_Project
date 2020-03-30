@@ -1,5 +1,10 @@
+"""Implements game and board state functionality."""
+
 from time import sleep
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GameState:
     def __init__(self, GameServer):

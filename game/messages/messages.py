@@ -1,6 +1,7 @@
 """Message protocol."""
 
 import json
+import logging
 
 # Message functions
 NULL = 0
@@ -15,6 +16,8 @@ REGISTER = 8
 QUERY = 9
 START = 10
 GUESS = 11
+
+logger = logging.getLogger(__name__)
 
 
 class MessageInterface:

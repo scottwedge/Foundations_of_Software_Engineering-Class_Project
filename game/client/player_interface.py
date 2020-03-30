@@ -1,6 +1,10 @@
 """Interface to support player actions."""
 
+import logging
+
 from game.messages.messages import MessageInterface, MOVE, ACCUSE, GUESS
+
+logger = logging.getLogger(__name__)
 
 
 class PlayerInterface:
