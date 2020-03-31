@@ -6,7 +6,7 @@ import logging
 import sys
 
 from game.client.player_interface import PlayerInterface
-from game.messages.messages import MessageInterface, REGISTER, QUERY
+from game.messages.messages import MessageInterface, REGISTER, QUERY, START
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,11 @@ class Client:
             print(register_msg)
             sock.sendall(struct.pack("!I", len(bytes(register_msg, "utf-8"))))
             sock.sendall(bytes(register_msg, "utf-8"))
+            ready = False
+            while not ready:
+                i = input("When you are ready, type 'ready': ")
+                if i.lower()=='ready':
+                    ready = True
             while sock:
                 query_msg = MessageInterface.create_message(QUERY, "")
                 print(query_msg)

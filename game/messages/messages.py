@@ -165,7 +165,7 @@ class Start:
 
     def __init__(self):
         """Start."""
-        pass
+        self.player = player
 
 
 class Guess:

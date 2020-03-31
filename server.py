@@ -7,6 +7,7 @@ import json
 import logging
 import sys
 from itertools import cycle
+from time import sleep
 
 from game.server.game_state import GameState
 from game.messages.messages import QUERY, START, MOVE, GUESS, ACCUSE
@@ -17,10 +18,11 @@ logger = logging.getLogger(__name__)
 HOST, PORT = "localhost", 9999
 connections = []
 player_list = {
-    "nick": "Miss Scarlet",   # Dummy value
+    "dummy_val": "Miss Scarlet",   # Dummy value
 }
 turn = b""
-cycler = cycle(player_list)
+first_turn = True
+cycler = None
 ready = False
 status = dict()
 class Server(asyncore.dispatcher):
@@ -64,12 +66,23 @@ class PlayerServer(asyncore.dispatcher_with_send):
         global turn
         global cycler
         global ready
+        global first_turn
         data = self.recv(4)
         (length,) = struct.unpack("!I", data)
         print(length)
         data = self.recv(length).decode('utf8')
         data = json.loads(data)
         print(data)
+        if first_turn:
+            print(str(cycler))
+            if len(player_list)>=2 and 'dummy_val' in player_list:
+                del player_list['dummy_val']
+            while len(player_list)<3:
+                print('waiting for more players, currently have '+str(len(player_list)))
+                sleep(15)
+            print(player_list)
+            cycler = cycle(player_list)
+            first_turn = False
         if data["function"] == QUERY:
             print("query")   # inside this branch, we would check in the future whether the move is valid or not. 
             self.send(b'{"turn":"%b"}' % turn.encode())  # instead of sending just whos turn it is here, send whole game state. 
@@ -84,7 +97,8 @@ class PlayerServer(asyncore.dispatcher_with_send):
             print(data["data"])
             #gs.process_player_action("") # idk format yet
             turn = next(cycler)
-        else: self.close()
+        else:
+            self.close()
 
 if __name__ == "__main__":
 
