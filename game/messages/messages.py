@@ -2,6 +2,7 @@
 
 import json
 import logging
+import struct
 
 # Message functions
 NULL = 0
@@ -16,6 +17,11 @@ REGISTER = 8
 QUERY = 9
 START = 10
 GUESS = 11
+SUCCESS = 12
+FAILURE = 13
+ENDTURN = 14
+
+message_db = {}
 
 logger = logging.getLogger(__name__)
 
@@ -24,31 +30,95 @@ class MessageInterface:
     """Exposes functionality to create and use messages."""
 
     @staticmethod
-    def create_message(function: int, data: object):
-        """Create a new message object and serialize its content."""
-        msg = Message(function, data)
+    def send_broadcast(socklist, data):
+        """
+        Send a new broadcast message.
 
-        # Serialize the object into the form {"x": 1, "y": 2}
-        return json.dumps(msg.__dict__)
+        Requires the list of connections and a python object.
+        """
+        # Create a json dict of the message
+        msg = MessageInterface.create_message(data)
+
+        for player, sock in socklist:
+            # Send message size (in bytes) first
+            sock.sendall(struct.pack("!I", len(bytes(msg, "utf-8"))))
+
+            # Send the message
+            sock.sendall(bytes(msg, "utf-8"))
 
     @staticmethod
-    def process_message(serialdata, query=False):
+    def send_message(sock, data):
+        """
+        Send a message.
+
+        Requires a valid socket object and a python object.
+        """
+        # Create a json dict of the message
+        msg = MessageInterface.create_message(data)
+
+        # Send message size (in bytes) first
+        sock.sendall(struct.pack("!I", len(bytes(msg, "utf-8"))))
+
+        # Send the message
+        sock.sendall(bytes(msg, "utf-8"))
+
+    @staticmethod
+    def recv_message(sock):
+        """
+        Recieve a message.
+
+        Requires a valid socket object and bytes length to accept. Will return
+        a valid object.
+        """
+        # The size of any message is a 4-byte field
+        msgsize = sock.recv(4)
+
+        # Pull out the message size
+        (length,) = struct.unpack("!I", msgsize)
+
+        # Recieve the message
+        msg = sock.recv(length).decode("utf-8")
+        msg = json.loads(msg)
+
+        return MessageInterface.process_message(msg)
+
+    @staticmethod
+    def create_message(message_obj: object):
+        """Prepare a message object to send."""
+        # Serialize the object into the form {"x": 1, "y": 2}
+        logger.debug(json.dumps(message_obj.__dict__))
+        return json.dumps(message_obj.__dict__)
+
+    @staticmethod
+    def process_message(serialdata):
         """
         Deserialize data and prepare a python object.
 
         TODO: Finish building new message from incoming serial data
         """
-        msg = Message()
-        obj = json.loads(serialdata)
-        if query:
-            msg.data = obj["turn"]
-        return msg
+        cls = message_db.get(serialdata["function"])
+        inst = cls()
+        inst.deserialize(serialdata)
+
+        logger.debug("After deserialize of JSON data")
+        logger.debug(inst.__dict__)
+
+        return inst
+
+    @staticmethod
+    def register_message(new_message: object, function: int):
+        """
+        Register a new class for new message type.
+
+        Added for each new message type as they are defined in messages.py.
+        """
+        message_db[function] = new_message
 
 
 class Message:
     """Base class for all messages between client and server."""
 
-    def __init__(self, function: int = 0, data: object = None):
+    def __init__(self, function: int = 0):
         """
         Initialize Message object.
 
@@ -62,115 +132,231 @@ class Message:
         # Hash of Message object and its contents, guarantees integrity
         self.checksum = None
 
-        # Data may be 12 different object types, but will match directly with
-        # function. For example, if this message is of type SUGGEST, then the
-        # function field will be 1 and the data field will contain the
-        # following information: player, location, weapon
-        self.data = data
 
-    def get_data(self):
-        """Get function-based data object."""
-        return self.data
-
-    def set_data(self, data: object):
-        """
-        Set the data object.
-
-        The data object can be one of the following objects from the list
-        below.
-        """
-        self.data = data
-
-
-class Suggest:
+class Suggest(Message):
     """Make a clue suggestion."""
 
-    def __init__(self, player, location, weapon):
+    def __init__(self, player=None, location=None, weapon=None):
         """Set suggestion."""
         self.player = player
         self.location = location
         self.weapon = weapon
 
+        super(Suggest, self).__init__(SUGGEST)
 
-class Accuse:
+    def deserialize(self, obj):
+        """Deserialize from json object."""
+        self.player = obj["player"]
+        self.location = obj["location"]
+        self.weapon = obj["weapon"]
+
+
+MessageInterface.register_message(Suggest, SUGGEST)
+
+
+class Accuse(Message):
     """Make a clue accusation."""
 
-    def __init__(self, player, location, weapon):
+    def __init__(self, player=None, location=None, weapon=None):
         """Set accusation."""
         self.player = player
         self.location = location
         self.weapon = weapon
 
+        super(Accuse, self).__init__(ACCUSE)
 
-class Refute:
+    def deserialize(self, obj):
+        """Deserialize from json object."""
+        self.player = obj["player"]
+        self.location = obj["location"]
+        self.weapon = obj["weapon"]
+
+
+MessageInterface.register_message(Accuse, ACCUSE)
+
+
+class Refute(Message):
     """Refute an accusation."""
 
     def __init__(self):
         """TODO."""
+        super(Refute, self).__init__(REFUTE)
+
+    def deserialize(self, obj):
+        """TODO."""
         pass
 
 
-class Move:
+MessageInterface.register_message(Refute, REFUTE)
+
+
+class Move(Message):
     """Make a move."""
 
     def __init__(self):
         """TODO."""
-        pass
+        super(Move, self).__init__(MOVE)
 
-
-class Update:
-    """Board state update."""
-
-    def __init__(self, board):
+    def deserialize(self, obj):
         """TODO."""
         pass
 
 
-class Display:
+MessageInterface.register_message(Move, MOVE)
+
+
+class Update(Message):
+    """Board state update."""
+
+    def __init__(self, board=None):
+        """TODO."""
+        self.board = board
+        super(Update, self).__init__(UPDATE)
+
+    def deserialize(self, obj):
+        """TODO."""
+        pass
+
+
+MessageInterface.register_message(Update, UPDATE)
+
+
+class Display(Message):
     """Display text."""
 
-    def __init__(self, text):
+    def __init__(self, text=None):
         """Set display text for client."""
         self.text = text
 
+        super(Display, self).__init__(DISPLAY)
 
-class Turn:
+    def deserialize(self, obj):
+        """TODO."""
+        self.text = obj["text"]
+
+
+MessageInterface.register_message(Display, DISPLAY)
+
+
+class Turn(Message):
     """Take a turn."""
 
-    def __init__(self, source, destination):
+    def __init__(self, player_name=""):
         """Set move from source to destination."""
-        self.source = source
-        self.destination = destination
+        self.player_name = player_name
+        super(Turn, self).__init__(TURN)
+
+    def deserialize(self, obj):
+        """TODO."""
+        self.player_name = obj["player_name"]
 
 
-class Register:
+MessageInterface.register_message(Turn, TURN)
+
+
+class Register(Message):
     """Register a player."""
 
-    def __init__(self, player, id):
-        """Add a new player with unique ID."""
+    def __init__(self, player=""):
+        """Add a new player."""
         self.player = player
-        self.id = id
+
+        super(Register, self).__init__(REGISTER)
+
+    def deserialize(self, obj):
+        """TODO."""
+        self.player = obj["player"]
 
 
-class Query:
+MessageInterface.register_message(Register, REGISTER)
+
+
+class Query(Message):
     """Query."""
 
     def __init__(self):
         """Query."""
+        super(Query, self).__init__(QUERY)
+
+    def deserialize(self, obj):
+        """TODO."""
         pass
 
 
-class Start:
+MessageInterface.register_message(Query, QUERY)
+
+
+class Start(Message):
     """Start."""
 
     def __init__(self):
         """Start."""
-        self.player = player
+        super(Start, self).__init__(START)
+
+    def deserialize(self, obj):
+        """TODO."""
+        pass
 
 
-class Guess:
+MessageInterface.register_message(Start, START)
+
+
+class Guess(Message):
     """Guess."""
 
     def __init__(self):
         """Guess."""
+        super(Guess, self).__init__(GUESS)
+
+    def deserialize(self, obj):
+        """TODO."""
         pass
+
+
+MessageInterface.register_message(Guess, GUESS)
+
+
+class Failure(Message):
+    """Failure."""
+
+    def __init__(self):
+        """Fail."""
+        super(Failure, self).__init__(FAILURE)
+
+    def deserialize(self, obj):
+        """TODO."""
+        pass
+
+
+MessageInterface.register_message(Failure, FAILURE)
+
+
+class Success(Message):
+    """Success."""
+
+    def __init__(self, clientcounter=0):
+        """Success."""
+        self.clientcounter = clientcounter
+        super(Success, self).__init__(SUCCESS)
+
+    def deserialize(self, obj):
+        """TODO."""
+        self.clientcounter = obj["clientcounter"]
+
+
+MessageInterface.register_message(Success, SUCCESS)
+
+
+class EndTurn(Message):
+    """End turn."""
+
+    def __init__(self):
+        """End turn."""
+        super(EndTurn, self).__init__(ENDTURN)
+
+    def deserialize(self, obj):
+        """TODO."""
+        pass
+
+
+MessageInterface.register_message(EndTurn, ENDTURN)
