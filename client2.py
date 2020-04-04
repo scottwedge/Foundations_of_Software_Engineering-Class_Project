@@ -84,28 +84,24 @@ class Client:
         """
         msg_counter = 0
         while sock:
-            # TODO: This is where interaction with the PlayerInterface and
-            # general message management/player input will happen.
+            # Get the message from the server
             logger.info("Waiting for new message from server...")
             msg = MessageInterface.recv_message(sock)
+            logger.info("Msg#: " + str(msg_counter) + " " + str(msg.__dict__))
 
-            if msg.function == TURN and msg.player_name == self.player:
-                logger.info("Genny, it's " + self.player + "'s turn!")
-                # Call into the player interface here and handle things as
-                # you see appropriate. You can assume that if you get into
-                # this conditional that the message (msg) is destined for you
-                # and it is your turn.
-
-                # Sleep here is just to simulate player decision making time
-                sleep(5)
-
-                # At the end of the turn, you MUST tell the server
+            # Call into the player interface here and handle things
+            rsp = self.player_interface.process_msg(msg)
+            # if there is a response, send it back to the server
+            # rsp is created in the player interface to be a Message type object
+            if rsp is not None:
+                logger.info("sending message to server")
+                MessageInterface.send_message(sock, rsp)
+            # At the end of the turn, you MUST tell the server
+            if rsp is not None or (msg.function == TURN and msg.player_name == self.name):
+                logger.info("ending turn")
                 MessageInterface.send_message(sock, EndTurn())
-            else:
-                sleep(2)
 
             msg_counter = msg_counter + 1
-            logger.info("Msg#: " + str(msg_counter) + " " + str(msg.__dict__))
 
     def confirm_ready(self):
         """Loop until lobby is ready."""

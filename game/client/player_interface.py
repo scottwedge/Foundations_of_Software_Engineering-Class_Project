@@ -3,6 +3,8 @@
 import logging
 import time
 from game.messages.messages import MessageInterface, MOVE, ACCUSE, GUESS
+from game.messages.messages import Start, DISPLAY, FAILURE, TURN
+from game.messages.messages import Suggest, Accuse
 
 logger = logging.getLogger(__name__)
 
@@ -15,41 +17,43 @@ class PlayerInterface:
         print("initialized")
         self.name = name
 
+    def gather_intel(self):
+        information = {}
+        information['player'] = input("Who do you suspect of the muder? (input the name only)\n")
+        information['weapon'] = input("What weapon did he/she use? (input the weapon only)\n")
+        information['location'] = input("Where did this happen? (input the location only)\n")
+        return information
+
     def take_turn(self):
+        rsp = None
         action = input("It is your turn!\nSelect from the following: Move, Guess, Accuse\n")
         # TODO check to see if the user input is a valid option ("move", "guess", "accusation")
         # if move, process move, if guess, process guess, if accusation, process accusation
         if "MOVE" in action.upper():
-            function = MOVE
+            logger.debug("eventually - player will be sending a move location")
+            rsp = None
         elif "GUESS" in action.upper():
-            function = GUESS
+            guess = self.gather_intel()
+            rsp = Suggest(player=guess['player'], location=guess['location'], weapon=guess['weapon'])
         elif "ACCUSE" in action.upper():
-            function = ACCUSE
+            accuse = self.gather_intel()
+            rsp = Accuse(player=accuse['player'], location=accuse['location'], weapon=accuse['weapon'])
         else:
-            print("Invalid choice, try again")
-            return self.take_turn()    # this is the worst hack of all time
-        return MessageInterface.create_message(function, action)
-
-    def process_text(self, msg):
-        print("text message")
-        print(msg.data)
-        action = input("Your response?\nPress enter if None\n")
-        if len(action) == 0:
-            action = None
-        return action
-
+            logger.info("Invalid choice, try again") #@TODO deal with this 
+        return rsp
     # return message to be sent to game server
     # msg - message class obj
     def process_msg(self, msg, query=False):
-        print("process msg")
         rsp = None
         #process the type
-        if msg.data in self.name and query:
+        if msg.function == TURN and msg.player_name == self.name:
+            logger.debug("Taking turn")
             rsp = self.take_turn()
-        elif query:
-            time.sleep(1) 
-        elif msg.function == 6:
-            rsp = self.process_text(msg)
+        elif msg.function == DISPLAY:
+            logger.debug("display message")
+            logger.info(msg.text)
+        elif msg.function == UPDATE:
+            logger.debug("update message")
         else:
-            print(msg)
+            logger.debug(msg)
         return rsp
