@@ -1,69 +1,93 @@
 """Implements game and board state functionality."""
 
 from time import sleep
+from copy import deepcopy
 import random
 import logging
 
 logger = logging.getLogger(__name__)
 
+# TODO: refactor to remove player_chars and char_players objects, since player ids is now managed by server object, so within game_state, only character names matter
+
 class GameState:
-    def __init__(self, GameServer):
+    def __init__(self, rooms=None, weapons=None, suspects=None, hallways=None, secret_passages=None, starting_locs=None):
         # the Server object manages all incoming and outgoing messages between
         # player clients and the server
+        # TODO: GameState will be controlled by GameServer, so after initializing all game attributes, drop references to Game Server and replace with class methods
         self.GameServer = GameServer
-
-        #while not self.GameServer.all_ready():
-            # Server object all_ready method checks if enough players are
-            # connected and that they have all marked themselves ready to start
-        #    sleep(15)
-
-        # initialize list of players, with their chosen characters
-        self.player_list = self.GameServer.get_player_list(self)
-        random.shuffle(self.player_list)
-        self.player_chars = {player:self.GameServer.get_character(self,player) for player in self.player_list}
-        self.char_players = {v:k for k, v in self.player_chars.items()}
-        self.player_hands = {p:[] for p in self.player_list}
+        
+        # initialize game_board
+        if not hallways:
+            hallways = [('Billiard Room', 'Dining Room'), ('Study', 'Hall'),
+                        ('Hall', 'Billiard Room'), ('Dining Room', 'Kitchen'),
+                        ('Lounge', 'Dining Room'), ('Library', 'Conservatory'),
+                        ('Billiard Room', 'Ballroom'), ('Ballroom', 'Kitchen'),
+                        ('Study', 'Library'), ('Library', 'Billiard Room'),
+                        ('Hall', 'Lounge'), ('Conservatory', 'Ballroom')]
+        if not secret_passages:
+            secret_passages = [('Study', 'Kitchen'), ('Lounge', 'Conservatory')]
+        if not starting_locs:
+            starting_locs = {'Miss Scarlet': ('Hall', 'Lounge'),
+                             'Professor Plum': ('Study', 'Library'),
+                             'Colonel Mustard': ('Lounge', 'Dining Room'),
+                             'Mrs. Peacock': ('Library', 'Conservatory'),
+                             'Mr. Green': ('Conservatory', 'Ballroom'),
+                             'Mrs. White': ('Ballroom', 'Kitchen')}
 
         # shuffle decks
-        rooms = ['Study', 'Hall', 'Lounge', 'Library', 'Billiard Room',
-                 'Dining Room', 'Conservatory', 'Ballroom', 'Kitchen']
-        weapons = ['Rope', 'Lead Pipe', 'Knife', 'Wrench', 'Candlestick', 'Revolver']
-        suspects = ['Colonel Mustard', 'Miss Scarlet', 'Professor Plum',
-                    'Mr. Green', 'Mrs. White', 'Mrs. Peacock']
+        if not rooms:
+            rooms = ['Study', 'Hall', 'Lounge', 'Library', 'Billiard Room',
+                     'Dining Room', 'Conservatory', 'Ballroom', 'Kitchen']
+        if not weapons:
+            weapons = ['Rope', 'Lead Pipe', 'Knife', 'Wrench', 'Candlestick',
+                       'Revolver']
+        if not suspects:
+            suspects = ['Colonel Mustard', 'Miss Scarlet', 'Professor Plum',
+                        'Mr. Green', 'Mrs. White', 'Mrs. Peacock']
         random.shuffle(rooms)
         random.shuffle(weapons)
         random.shuffle(suspects)
-
-        # initialize game_board
-        hallways = [('Billiard Room', 'Dining Room'), ('Study', 'Hall'),
-                    ('Hall', 'Billiard Room'), ('Dining Room', 'Kitchen'),
-                    ('Lounge', 'Dining Room'), ('Library', 'Conservatory'),
-                    ('Billiard Room', 'Ballroom'), ('Ballroom', 'Kitchen'),
-                    ('Study', 'Library'), ('Library', 'Billiard Room'),
-                    ('Hall', 'Lounge'), ('Conservatory', 'Ballroom')]
-        secret_passages = [('Study', 'Kitchen'), ('Lounge', 'Conservatory')]
-        self.game_board = GameBoard(rooms=rooms, hallways=hallways,
-                                    secret_passages=secret_passages,
-                                    players=self.player_list,
-                                    player_chars=self.player_chars,
-                                    char_players=self.char_players)
         
-        # Set Game Solution
+        # Set game solution
         self.solution = {'room': rooms.pop(), 'weapon': weapons.pop(), 'suspect': suspects.pop()}
 
-        # deal out cards to players
+        # combine and shuffle deck
         cards = rooms+weapons+suspects
         random.shuffle(cards)
-        
+
         # add solution cards back to reference lists
         rooms.append(self.solution['room'])
         weapons.append(self.solution['weapon'])
         suspects.append(self.solution['suspect'])
-        self.rooms = rooms
+        
+        # set game info as class attributes
         self.hallways = hallways
+        self.secret_passages = secret_passages
+        self.rooms = rooms
+        self.starting_locs = starting_locs
         self.weapons = weapons
         self.suspects = suspects
-        
+        self.cards = cards
+
+    def setup_game(connections):
+        '''
+        TODO: add docstring
+        '''
+        # initialize list of players, with their chosen characters
+        self.player_list = [p[0] for p in connections]
+        self.player_chars = {player:self.GameServer.get_character(self,player) for player in self.player_list}
+        self.char_players = {v:k for k, v in self.player_chars.items()}
+        self.player_hands = {p:[] for p in self.player_list}
+
+        # initialize game board
+        self.game_board = GameBoard(rooms=self.rooms, hallways=self.hallways,
+                                    secret_passages=self.secret_passages,
+                                    players=self.player_list,
+                                    player_chars=self.player_chars,
+                                    char_players=self.char_players,
+                                    starting_locs=self.starting_locs)
+
+        # deal out cards to players
         while len(cards)>0:
             for player in self.player_list:
                 try:
@@ -71,16 +95,17 @@ class GameState:
                 except IndexError as e:
                     break
         
-        # initial player is always Miss Scarlet, if no Miss Scarlet, then
-        # use random player order
-        self.character_order = list(self.char_players.keys())
-        random.shuffle(self.character_order)
-        if 'Miss Scarlet' in self.character_order:
+        # Randomize player turn order. Initial player is always Miss Scarlet,
+        # if no Miss Scarlet, then use random first player
+        self.player_order = deepcopy(self.player_list)
+        random.shuffle(self.player_order)
+        if 'Miss Scarlet' in self.player_order:
             self.current_character = 'Miss Scarlet'
-            self.character_order.remove('Miss Scarlet')
-            self.character_order.insert(0,'Miss Scarlet')
-            self.turn_counter = 0
-        self.player_order = [self.char_players[c] for c in self.character_order]
+            self.player_order.remove('Miss Scarlet')
+            self.player_order.insert(0,'Miss Scarlet')
+
+        self.turn_counter = 0
+        self.player_order = [self.char_players[c] for c in self.player_order]
         self.current_player = self.char_players[self.current_character]
 
     def process_player_action(self,action_info):
@@ -166,14 +191,14 @@ class GameState:
 
     def rollover_turn(self):
         self.turn_counter += 1
-        self.current_character = self.character_order[self.turn_counter % len(self.character_order)]
+        self.current_character = self.player_order[self.turn_counter % len(self.player_order)]
         self.current_player = self.player_order[self.turn_counter % len(self.player_order)]
         
     def _intersection(self, lst1, lst2):
         return list(set(lst1) & set(lst2))
 
 class GameBoard:
-    def __init__(self, rooms, hallways, secret_passages, players, player_chars, char_players):
+    def __init__(self, rooms, hallways, secret_passages, players, player_chars, char_players, starting_locs):
         # GameBoard class is basically a Graph class that's already implemented
         # pretty well in networkx library. TBD whether it would be better to
         # use that library or this instead.  Most of the verbiage below
@@ -184,12 +209,7 @@ class GameBoard:
         self.nodes = {r:[] for r in rooms+hallways}
         self.remaining_space = {r:1 for r in hallways}
         self.remaining_space.update({r:6 for r in rooms})
-        self.player_locs = {'Miss Scarlet': ('Hall', 'Lounge'),
-                            'Professor Plum': ('Study', 'Library'),
-                            'Colonel Mustard': ('Lounge', 'Dining Room'),
-                            'Mrs. Peacock': ('Library', 'Conservatory'),
-                            'Mr. Green': ('Conservatory', 'Ballroom'),
-                            'Mrs. White': ('Ballroom', 'Kitchen')}
+        self.player_locs = starting_locs
         self.char_players = char_players
         for r  in self.player_locs.values():
             self.remaining_space[r]-=1

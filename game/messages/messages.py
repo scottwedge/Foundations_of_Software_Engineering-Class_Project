@@ -226,7 +226,7 @@ class Display(Message):
 
     def __init__(self, text=None):
         """Set display text for client."""
-        self.text = text
+        self.text = str(text)
 
         super(Display, self).__init__(DISPLAY)
 

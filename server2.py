@@ -5,9 +5,13 @@ import threading
 import logging
 import sys
 
+from time import sleep
+from copy import deepcopy
+
 from game.messages.messages import MessageInterface
 from game.messages.messages import REGISTER, START, ENDTURN
 from game.messages.messages import Failure, Success, Turn, Display
+from game.server.game_state import GameState, GameBoard
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.CRITICAL)
@@ -24,10 +28,6 @@ avail_characters = dict([
     (6, "Colonel Mustard")
 ])
 
-# List of tuples of (<character name>, <socket object>) added in chronological
-# order
-connections = []
-
 
 class ThreadedServer(object):
     """Threaded server for socket interaction, management."""
@@ -42,6 +42,12 @@ class ThreadedServer(object):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
+
+        # List of tuples of (<character name>, <socket object>) added in
+        # chronological order
+        self.connections = []
+        self.game_state = GameState()
+        self.setting_up_game = True
 
     def listen(self):
         """Listen."""
@@ -94,17 +100,32 @@ class ThreadedServer(object):
 
             # Connections is a chronological list of players in the game. Once
             # three or more (up to 6) players have joined, gameplay may begin
-            connections.append((new_player, client))
+            self.connections.append((new_player, client))
             logger.info("Player " + new_player + " added to connections.")
 
         logger.info("Available characters: " + str(avail_characters))
 
-        # The first client connected is the "lobby leader"
         if clientcounter == 1:
-            # Lobby leader has indicated the game can begin
+            # The first client connected is the "lobby leader"
+
+            # waiting to receive message that lobby leader starts game.
             start = MessageInterface.recv_message(client)
+
             if start.function == START:
-                MessageInterface.send_broadcast(connections, Turn(new_player))
+                game_state.setup_game()
+                
+                # randomize character order by randomizing connection order
+                # However, Miss Scarlet is always guaranteed to be first
+                self.player_order = game_state.player_order
+                cdict = dict(self.connections)
+                self.connections = [(p,cdict[p]) for p in self.player_order]
+                self.setting_up_game = False
+                MessageInterface.send_broadcast(self.connections, Turn(player_order[0]))
+        else:
+            while self.setting_up_game:
+                # delay starting server loop until lobby leader starts game
+                MessageInterface.send_message(client, 'Currently waiting for lobby leader to start game')
+                sleep(15)
 
         # Run the game until end
         self.server_loop(client)
@@ -114,10 +135,12 @@ class ThreadedServer(object):
 
     def server_loop(self, client):
         """
-        Server interaction loop.
+        Server interaction loop.  A separate server loop exists for each client
+        thread, one of which exists for each client.  
 
         TODO: Fill in this portion here with messaging/game state logic
         """
+        
         while True:
             try:
                 msg = MessageInterface.recv_message(client)
@@ -135,12 +158,12 @@ class ThreadedServer(object):
                 # server, who will then increment the turn index and broadcast
                 # the new turn to all players
                 if msg.function == ENDTURN:
-                    self.turn = (self.turn + 1) % len(connections)
+                    self.turn = (self.turn + 1) % len(self.connections)
 
                     # Player name is the first element in the connections tuple
                     # [("Professor Plum", <socket object>), etc]
-                    player = connections[self.turn][0]
-                    MessageInterface.send_broadcast(connections, Turn(player))
+                    player = self.connections[self.turn][0]
+                    MessageInterface.send_broadcast(self.connections, Turn(player))
 
             except SystemError:
                 client.close()
