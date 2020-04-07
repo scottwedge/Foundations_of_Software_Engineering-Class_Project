@@ -8,7 +8,6 @@ import sys
 from time import sleep
 from copy import deepcopy
 
-from game.messages.messages import MessageInterface
 from game.messages.messages import *
 from game.server.game_state import GameState, GameBoard
 
@@ -113,7 +112,8 @@ class ThreadedServer(object):
             if start.function == START:
                 game_state.setup_game()
                 
-                # randomize character order by randomizing connection order
+                # game_state randomizes character order by randomizing
+                # connection order.
                 # However, Miss Scarlet is always guaranteed to be first
                 self.player_order = game_state.player_order
                 cdict = dict(self.connections)
@@ -127,12 +127,12 @@ class ThreadedServer(object):
                 sleep(15)
 
         # Run the game until end
-        self.server_loop(client)
+        self.server_loop(client, new_player)
 
         logger.debug("Client shutting down...")
         return False
 
-    def server_loop(self, client):
+    def server_loop(self, client, character):
         """
         Server interaction loop.  A separate server loop exists for each client
         thread, one of which exists for each client.  
@@ -157,21 +157,71 @@ class ThreadedServer(object):
                 # server, who will then increment the turn index and broadcast
                 # the new turn to all players
                 if msg.function == VIEWHAND:
-                    pass
+                    player_hand = game_state.check_hand(character)
+                    MessageInterface.send_message(client, Display(player_hand))
                 elif msg.function == VIEWMOVES:
-                    pass
+                    allowed_moves = game_state.check_available_moves(character)
+                    MessageInterface.send_message(client, Display(allowed_moves))
                 elif msg.function == MOVE:
-                    pass
+                    resp = game_state.move_char(character, destination)
+                    if resp['status']=='Invalid':
+                        MessageInterface.send_message(client, Display(resp['message']))
+                    else:
+                        MessageInterface.send_broadcast(self.connections, Display(resp['message']))
                 elif msg.function == GUESS:
                     suspect = msg.player
                     weapon = msg.weapon
                     loc = msg.location
-                    accusation_list = unpack_suggestion()
-                    message = character+' has suggested that '+suspect+' performed the murder in the '+loc+' using the '+weapon
+                    resp = check_suggestion(character, suspect, weapon, loc)
+                    if resp['status'] is 'Invalid':
+                        # reject invalid suggestion, try again
+                        MessageInterface.send_message(client, Display(resp['message']))
+                        continue
+
+                    others = [c for c in self.connections if client not in c]
+                    # TODO: response is required from other players while still
+                    # in current player's server_loop.  If message is to be
+                    # received by current player's server_loop, keep as below,
+                    # however, if refutation can only be parsed by
+                    # that player's server_loop, then create a class attribute
+                    # for refutations and have each responding player modify
+                    # entries in refutations from within their own server loop.
+                    # Refutation will require knowledge of the player's hand.
+                    refutations = {c:None for c in others}
+                    MessageInterface.send_broadcast(others, Display(resp['message']))
+
+                    # polls each client other than the one to which this server
+                    # loop belongs to for a response to the suggestion.
+                    # TODO: This probably should be moved into its own
+                    # msg.function elif block tbh.
+                    while not all(refutations.values()):
+                        for char in refutations.keys():
+                            refute = MessageInterface.recv_message(char[1])
+                            refutation = refute.refutation
+                            # card name if refuted, None if no refutation made
+
+                            if refute.function==REFUTE and refutation:
+                                MessageInterface.send_message(client, refutation)
+
                 elif msg.function == ACCUSE:
-                    pass
+                    suspect = msg.player
+                    weapon = msg.weapon
+                    loc = msg.location
+                    resp = make_accusation(character, weapon, suspect, loc)
+
+                    resp.send_broadcast(self.connections, Display(resp['message']))
+
+                    if resp['status'] is 'Incorrect':
+                        self.connections.remove((character, client))
+                        client.close()
+                        return False
+                    else:
+                        # TODO: Insert shutdown sequence here
+                        pass
+
                 elif msg.function == ENDTURN:
                     self.turn = (self.turn + 1) % len(self.connections)
+                    self.game_state.rollover_turn()
 
                     # Player name is the first element in the connections tuple
                     # [("Professor Plum", <socket object>), etc]

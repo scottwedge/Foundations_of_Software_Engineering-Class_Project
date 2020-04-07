@@ -5,6 +5,7 @@ import logging
 import struct
 
 # Message functions
+# Guess and Suggest seem redundant, should they be merged?
 NULL = 0
 SUGGEST = 1
 ACCUSE = 2

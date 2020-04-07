@@ -8,7 +8,14 @@ from game.messages.messages import Suggest, Accuse
 
 logger = logging.getLogger(__name__)
 
-
+# TODO: response is required from other players while still
+# in current player's server_loop.  If message is to be
+# received by current player's server_loop, keep as below,
+# however, if refutation can only be parsed by
+# that player's server_loop, then create a class attribute
+# for refutations and have each responding player modify
+# entries in refutations from within their own server loop.
+# Refutation will require knowledge of the player's hand.
 class PlayerInterface:
     """Class that creates/processes actions for the player."""
 

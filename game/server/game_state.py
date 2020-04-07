@@ -7,12 +7,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# TODO: finish fleshing out turn action logic
-# TODO: keep a running turn_counter in here to supplement server2's turn counter.  However, make it so that advancing turn must be manually called by the server, unless triggered automatically.
-# TODO: all class methods for actions or game logic must not rely on additional inputs than what is given at the start because there is not an easy way for game_state to make callbacks
-# if additional input is required (ie, to check suggestion validity), then that must be split into multiple methods. So for example, if implementing suggestion requires an additional response from another player
-# then that additional response must be in its own separate method that server2 must call by itself (alternatively, just implement callbacks)
-
 class GameState:
     def __init__(self, rooms=None, weapons=None, suspects=None, hallways=None, secret_passages=None, starting_locs=None):
         # the Server object manages all incoming and outgoing messages between
@@ -106,6 +100,11 @@ class GameState:
 
         self.turn_counter = 0
 
+    def check_hand(player):
+        hand_contents = '\n'.join(self.player_hands[player])
+
+        return hand_contents
+
     def check_available_moves(character):
         loc = self.game_board.player_locs[character]
         possible_moves = self.game_board.nodes[loc]
@@ -116,65 +115,53 @@ class GameState:
 
         return allowed_moves
 
-    def check_hand(player):
-        hand_contents = '\n'.join(self.player_hands[player])
-
-        return hand_contents
-
     def move_char(char,destination):
         loc = self.game_board.player_locs[character]
         destination = action_info['destination']
+        resp = {}
+
         if destination not in self.game_board.nodes[loc]:
-            resp['status'] = 'Rejected'
+            resp['status'] = 'Invalid'
             resp['message'] = 'You cannot reach that location from your current location'
         elif self.game_board.remaining_space[destination]==0:
-            resp['status'] = 'Rejected'
+            resp['status'] = 'Invalid'
             resp['message'] = 'That location has no room, you cannot move there'
         else:
             self.game_board.move_char(character,destination)
+            resp['status'] = 'Valid'
+            resp['message'] = character+' has been moved to '+destination
 
-    def unpack_suggestion(char,weapon,suspect,room):
+        return resp
+
+    def check_suggestion(char,weapon,suspect,room):
         loc = self.game_board.player_locs[character]
+        resp = {'status':'Valid'}
+
         if loc in self.hallways:
             resp['status'] = 'Invalid'
             resp['message'] = 'The murder did not occur in a hallway, so you cannot make a suggestion here'
             return resp
 
-        weapon = action_info['weapon']
-        suspect = action_info['suspect']
-        cardlist = (weapon, suspect, loc)
+        resp['message'] = character+' has suggested that '+suspect+' performed the murder in the '+room+' using the '+weapon+'. Please submit your refutations, if any.'
 
         self.game_board.move_char(suspect, loc)
 
-        return cardlist
-
-    def formulate_suggestion_response(char,cardlist,responses):
-        for responder, hand in self.player_hands.items():
-            intersection = self._intersection(hand, cardlist)
-            if len(intersection)==0:
-                self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' does not have any cards which refute the suggestion of '+player})
-            elif len(intersection)==1:
-                refutation = intersection[0]
-                self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' has the card '+refutation+' which refutes the suggestion of '+player})
-            elif len(intersection)>=2:
-                self.GameServer.broadcast({'recipients':responder,'message_type':'prompt_suggestion_response','message':'you have multiple cards which can refute the suggestion, pick one to show to '+player})
-
-        message = 'Each player responded in the following way:\n'
-        for player, r in sugg_resps:
-            message = message+player+': '+r
-        resp['message'] = message
         return resp
 
     def make_accusation(char,weapon,suspect,room):
-        pass
+        accusation = {'room':room,'weapon':weapon,'suspect':suspect}
+        resp = {'status':'Correct'}
+        if accusation==self.solution:
+            resp['message'] = char+' has successfully solved the murder.  It was '+suspect+' in the '+room+' with the '+weapon+'.'
+        else:
+            resp['status'] = 'Incorrect'
+            resp['message'] = 'Unfortunately, that is not the correct answer. Because '+char+' made a false accusation, they are removed from the game.'
+
+        return resp
 
     def rollover_turn(self):
         self.turn_counter += 1
         self.current_character = self.player_order[self.turn_counter % len(self.player_order)]
-        self.current_player = self.player_order[self.turn_counter % len(self.player_order)]
-
-    def _intersection(self, lst1, lst2):
-        return list(set(lst1) & set(lst2))
 
 class GameBoard:
     def __init__(self, rooms, hallways, secret_passages, players, starting_locs):
