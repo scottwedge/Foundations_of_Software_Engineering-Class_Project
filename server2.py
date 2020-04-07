@@ -9,8 +9,7 @@ from time import sleep
 from copy import deepcopy
 
 from game.messages.messages import MessageInterface
-from game.messages.messages import REGISTER, START, ENDTURN
-from game.messages.messages import Failure, Success, Turn, Display
+from game.messages.messages import *
 from game.server.game_state import GameState, GameBoard
 
 logger = logging.getLogger(__name__)
@@ -157,7 +156,14 @@ class ThreadedServer(object):
                 # When a client is done with their turn, they will notify the
                 # server, who will then increment the turn index and broadcast
                 # the new turn to all players
-                if msg.function == ENDTURN:
+                if msg.function == ViewHand:
+                    pass
+                elif msg.function == ViewMoves:
+                    pass
+                elif msg.function == Move:
+                    pass
+                elif msg.function == 
+                elif msg.function == ENDTURN:
                     self.turn = (self.turn + 1) % len(self.connections)
 
                     # Player name is the first element in the connections tuple

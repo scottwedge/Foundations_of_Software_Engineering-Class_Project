@@ -20,6 +20,8 @@ GUESS = 11
 SUCCESS = 12
 FAILURE = 13
 ENDTURN = 14
+VIEWHAND = 15
+VIEWMOVES = 16
 
 message_db = {}
 
@@ -203,6 +205,36 @@ class Move(Message):
 
 
 MessageInterface.register_message(Move, MOVE)
+
+
+class ViewHand(Message):
+    """Make a move."""
+
+    def __init__(self):
+        """TODO."""
+        super(ViewHand, self).__init__(ViewHand)
+
+    def deserialize(self, obj):
+        """TODO."""
+        pass
+
+
+MessageInterface.register_message(ViewHand, VIEWHAND)
+
+
+class ViewMoves(Message):
+    """Make a move."""
+
+    def __init__(self):
+        """TODO."""
+        super(ViewMoves, self).__init__(ViewMoves)
+
+    def deserialize(self, obj):
+        """TODO."""
+        pass
+
+
+MessageInterface.register_message(ViewMoves, VIEWMOVES)
 
 
 class Update(Message):

@@ -8,6 +8,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 # TODO: refactor to remove player_chars and char_players objects, since player ids is now managed by server object, so within game_state, only character names matter
+# TODO: split and refactor methods that are here already to move gameserver references out to server2.py, instead, move message parse logic to server2, and divide up actions among different class methods
+# TODO: keep a running turn_counter in here to supplement server2's turn counter.  However, make it so that advancing turn must be manually called by the server, unless triggered automatically.
+# TODO: all class methods for actions or game logic must not rely on additional inputs than what is given at the start because there is not an easy way for game_state to make callbacks
+# if additional input is required (ie, to check suggestion validity), then that must be split into multiple methods. So for example, if implementing suggestion requires an additional response from another player
+# then that additional response must be in its own separate method that server2 must call by itself (alternatively, just implement callbacks)
 
 class GameState:
     def __init__(self, rooms=None, weapons=None, suspects=None, hallways=None, secret_passages=None, starting_locs=None):
@@ -107,6 +112,28 @@ class GameState:
         self.turn_counter = 0
         self.player_order = [self.char_players[c] for c in self.player_order]
         self.current_player = self.char_players[self.current_character]
+    
+    def check_available_moves(char):
+        loc = self.game_board.player_locs[character]
+        possible_moves = self.game_board.nodes[loc]
+        allowed_moves = []
+        for move in possible_moves:
+            if self.game_board.remaining_space[move]>0:
+                allowed_moves.append(str(move))
+
+        return allowed_moves
+        
+    def check_hand(char):
+        pass
+        
+    def move_char(char,destination,):
+        pass
+
+    def make_suggestion(char,weapon,suspect,room):
+        pass
+    
+    def make_accusation(char,weapon,suspect,room):
+        pass
 
     def process_player_action(self,action_info):
         '''
