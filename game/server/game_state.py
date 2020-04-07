@@ -7,8 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# TODO: refactor to remove player_chars and char_players objects, since player ids is now managed by server object, so within game_state, only character names matter
-# TODO: split and refactor methods that are here already to move gameserver references out to server2.py, instead, move message parse logic to server2, and divide up actions among different class methods
+# TODO: finish fleshing out turn action logic
 # TODO: keep a running turn_counter in here to supplement server2's turn counter.  However, make it so that advancing turn must be manually called by the server, unless triggered automatically.
 # TODO: all class methods for actions or game logic must not rely on additional inputs than what is given at the start because there is not an easy way for game_state to make callbacks
 # if additional input is required (ie, to check suggestion validity), then that must be split into multiple methods. So for example, if implementing suggestion requires an additional response from another player
@@ -80,16 +79,12 @@ class GameState:
         '''
         # initialize list of players, with their chosen characters
         self.player_list = [p[0] for p in connections]
-        self.player_chars = {player:self.GameServer.get_character(self,player) for player in self.player_list}
-        self.char_players = {v:k for k, v in self.player_chars.items()}
         self.player_hands = {p:[] for p in self.player_list}
 
         # initialize game board
         self.game_board = GameBoard(rooms=self.rooms, hallways=self.hallways,
                                     secret_passages=self.secret_passages,
                                     players=self.player_list,
-                                    player_chars=self.player_chars,
-                                    char_players=self.char_players,
                                     starting_locs=self.starting_locs)
 
         # deal out cards to players
@@ -110,10 +105,8 @@ class GameState:
             self.player_order.insert(0,'Miss Scarlet')
 
         self.turn_counter = 0
-        self.player_order = [self.char_players[c] for c in self.player_order]
-        self.current_player = self.char_players[self.current_character]
-    
-    def check_available_moves(char):
+
+    def check_available_moves(character):
         loc = self.game_board.player_locs[character]
         possible_moves = self.game_board.nodes[loc]
         allowed_moves = []
@@ -122,110 +115,69 @@ class GameState:
                 allowed_moves.append(str(move))
 
         return allowed_moves
-        
-    def check_hand(char):
-        pass
-        
-    def move_char(char,destination,):
-        pass
 
-    def make_suggestion(char,weapon,suspect,room):
-        pass
-    
+    def check_hand(player):
+        hand_contents = '\n'.join(self.player_hands[player])
+
+        return hand_contents
+
+    def move_char(char,destination):
+        loc = self.game_board.player_locs[character]
+        destination = action_info['destination']
+        if destination not in self.game_board.nodes[loc]:
+            resp['status'] = 'Rejected'
+            resp['message'] = 'You cannot reach that location from your current location'
+        elif self.game_board.remaining_space[destination]==0:
+            resp['status'] = 'Rejected'
+            resp['message'] = 'That location has no room, you cannot move there'
+        else:
+            self.game_board.move_char(character,destination)
+
+    def unpack_suggestion(char,weapon,suspect,room):
+        loc = self.game_board.player_locs[character]
+        if loc in self.hallways:
+            resp['status'] = 'Invalid'
+            resp['message'] = 'The murder did not occur in a hallway, so you cannot make a suggestion here'
+            return resp
+
+        weapon = action_info['weapon']
+        suspect = action_info['suspect']
+        cardlist = (weapon, suspect, loc)
+
+        self.game_board.move_char(suspect, loc)
+
+        return cardlist
+
+    def formulate_suggestion_response(char,cardlist,responses):
+        for responder, hand in self.player_hands.items():
+            intersection = self._intersection(hand, cardlist)
+            if len(intersection)==0:
+                self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' does not have any cards which refute the suggestion of '+player})
+            elif len(intersection)==1:
+                refutation = intersection[0]
+                self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' has the card '+refutation+' which refutes the suggestion of '+player})
+            elif len(intersection)>=2:
+                self.GameServer.broadcast({'recipients':responder,'message_type':'prompt_suggestion_response','message':'you have multiple cards which can refute the suggestion, pick one to show to '+player})
+
+        message = 'Each player responded in the following way:\n'
+        for player, r in sugg_resps:
+            message = message+player+': '+r
+        resp['message'] = message
+        return resp
+
     def make_accusation(char,weapon,suspect,room):
         pass
-
-    def process_player_action(self,action_info):
-        '''
-        Evaluates the player action that was received by the server from the
-        player client.  Either rejects it if it is an invalid action, or
-        acccepts it if it is valid, in which case it prepares a response dict.
-        '''
-        action_type = action_info['action_type']
-        character = action_info['character']
-        player = action_info['player']
-        resp = {'status':'Completed','character':character,'player':player}
-
-        if 'check' not in action_type and (character!=self.current_character or player!=self.current_player):
-            resp['status'] = 'Rejected'
-            resp['message'] = 'It\'s not your turn!'
-            return resp
-
-        if action_type=='checkAvailableMoves':
-            loc = self.game_board.player_locs[character]
-            possible_moves = self.game_board.nodes[loc]
-            allowed_moves = []
-            for move in possible_moves:
-                if self.game_board.remaining_space[move]>0:
-                    allowed_moves.append(str(move))
-            resp['message'] = 'Possible Moves:\n'+'\n'.join(allowed_moves)
-            return resp
-        elif action_type=='checkHand':
-            resp['message'] = '\n'.join(self.player_hands[player])
-            return resp
-        elif action_type=='makeSuggestion':
-            loc = self.game_board.player_locs[character]
-            if loc in self.hallways:
-                resp['status'] = 'Rejected'
-                resp['message'] = 'The murder did not occur in a hallway, so you cannot make a suggestion here'
-                return resp
-
-            weapon = action_info['weapon']
-            suspect = action_info['suspect']
-            self.game_board.move_char(suspect, loc)
-            
-            message = character+' has suggested that '+suspect+' performed the murder in the '+loc+' using the '+weapon
-            self.GameServer.broadcast({'recipients':'all','message_type':'announcement','message':message})
-            cardlist = [weapon, suspect, loc]
-            for responder, hand in self.player_hands.items():
-                intersection = self._intersection(hand, cardlist)
-                if len(intersection)==0:
-                    self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' does not have any cards which refute the suggestion of '+player})
-                elif len(intersection)==1:
-                    refutation = intersection[0]
-                    self.GameServer.broadcast({'recipients':responder,'message_type':'announcement','needs_acknowledgment':True,'message':responder+' has the card '+refutation+' which refutes the suggestion of '+player})
-                elif len(intersection)>=2:
-                    self.GameServer.broadcast({'recipients':responder,'message_type':'prompt_suggestion_response','message':'you have multiple cards which can refute the suggestion, pick one to show to '+player})
-
-            # every player must either acknowledge the response above, or if
-            # has multiple cards, select one card to show. Information is not
-            # disclosed until all other players have acknowledged or responded.
-            awaiting_player_response = {p:True for p in self.player_list if p!=player}
-            while(any(awaiting_player_response.values())):
-                sugg_resps, awaiting_player_response = self.GameServer.get_sugg_resps()
-                sleep(10)
-            
-            message = 'Each player responded in the following way:\n'
-            for player, r in sugg_resps:
-                message = message+player+': '+r
-            resp['message'] = message
-            return resp
-            # TODO: fill out gameserver code, player interface, to make suggestion response section above make sense. Then use as template for remaining game state options.
-
-        elif action_type=='makeAccusation':
-            pass
-        elif action_type=='moveChar':
-            loc = self.game_board.player_locs[character]
-            destination = action_info['destination']
-            if destination not in self.game_board.nodes[loc]:
-                resp['status'] = 'Rejected'
-                resp['message'] = 'You cannot reach that location from your current location'
-            elif self.game_board.remaining_space[destination]==0:
-                resp['status'] = 'Rejected'
-                resp['message'] = 'That location has no room, you cannot move there'
-            else:
-                self.game_board.move_char(character,destination)
 
     def rollover_turn(self):
         self.turn_counter += 1
         self.current_character = self.player_order[self.turn_counter % len(self.player_order)]
         self.current_player = self.player_order[self.turn_counter % len(self.player_order)]
-        
+
     def _intersection(self, lst1, lst2):
         return list(set(lst1) & set(lst2))
 
 class GameBoard:
-    def __init__(self, rooms, hallways, secret_passages, players, player_chars, char_players, starting_locs):
+    def __init__(self, rooms, hallways, secret_passages, players, starting_locs):
         # GameBoard class is basically a Graph class that's already implemented
         # pretty well in networkx library. TBD whether it would be better to
         # use that library or this instead.  Most of the verbiage below
@@ -237,7 +189,6 @@ class GameBoard:
         self.remaining_space = {r:1 for r in hallways}
         self.remaining_space.update({r:6 for r in rooms})
         self.player_locs = starting_locs
-        self.char_players = char_players
         for r  in self.player_locs.values():
             self.remaining_space[r]-=1
         print(self.remaining_space)

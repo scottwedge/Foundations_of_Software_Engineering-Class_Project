@@ -156,13 +156,20 @@ class ThreadedServer(object):
                 # When a client is done with their turn, they will notify the
                 # server, who will then increment the turn index and broadcast
                 # the new turn to all players
-                if msg.function == ViewHand:
+                if msg.function == VIEWHAND:
                     pass
-                elif msg.function == ViewMoves:
+                elif msg.function == VIEWMOVES:
                     pass
-                elif msg.function == Move:
+                elif msg.function == MOVE:
                     pass
-                elif msg.function == 
+                elif msg.function == GUESS:
+                    suspect = msg.player
+                    weapon = msg.weapon
+                    loc = msg.location
+                    accusation_list = unpack_suggestion()
+                    message = character+' has suggested that '+suspect+' performed the murder in the '+loc+' using the '+weapon
+                elif msg.function == ACCUSE:
+                    pass
                 elif msg.function == ENDTURN:
                     self.turn = (self.turn + 1) % len(self.connections)
 
