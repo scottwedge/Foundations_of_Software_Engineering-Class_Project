@@ -172,7 +172,7 @@ class ThreadedServer(object):
                     suspect = msg.player
                     weapon = msg.weapon
                     loc = msg.location
-                    resp = check_suggestion(character, suspect, weapon, loc)
+                    resp = check_suggestion(character, weapon, suspect, loc)
                     if resp['status'] is 'Invalid':
                         # reject invalid suggestion, try again
                         MessageInterface.send_message(client, Display(resp['message']))
