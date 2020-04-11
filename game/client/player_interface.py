@@ -2,7 +2,7 @@
 
 import logging
 import time
-from game.messages.messages import MessageInterface, MOVE, ACCUSE, GUESS
+from game.messages.messages import MessageInterface, MOVE, ACCUSE, SUGGEST
 from game.messages.messages import Start, DISPLAY, FAILURE, TURN
 from game.messages.messages import Suggest, Accuse
 
@@ -39,7 +39,7 @@ class PlayerInterface:
         if "MOVE" in action.upper():
             logger.debug("eventually - player will be sending a move location")
             rsp = None
-        elif "GUESS" in action.upper():
+        elif "SUGGEST" in action.upper():
             guess = self.gather_intel()
             rsp = Suggest(player=guess['player'], location=guess['location'], weapon=guess['weapon'])
         elif "ACCUSE" in action.upper():

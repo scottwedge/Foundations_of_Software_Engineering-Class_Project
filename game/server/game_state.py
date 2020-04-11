@@ -193,7 +193,7 @@ class GameBoard:
             self.nodes[sp[0]].append(sp[1])
             self.nodes[sp[1]].append(sp[0])
     
-    def move_char(self, char,new_room):
+    def move_char(self, char, new_room):
         # at present presumes that validity of the move is already verified
         self.remaining_space[self.player_locs[char]]+=1
         self.player_locs[char] = new_room

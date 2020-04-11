@@ -168,7 +168,7 @@ class ThreadedServer(object):
                         MessageInterface.send_message(client, Display(resp['message']))
                     else:
                         MessageInterface.send_broadcast(self.connections, Display(resp['message']))
-                elif msg.function == GUESS:
+                elif msg.function == SUGGEST:
                     suspect = msg.player
                     weapon = msg.weapon
                     loc = msg.location

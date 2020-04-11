@@ -17,7 +17,6 @@ TURN = 7
 REGISTER = 8
 QUERY = 9
 START = 10
-GUESS = 11
 SUCCESS = 12
 FAILURE = 13
 ENDTURN = 14
@@ -339,14 +338,14 @@ class Guess(Message):
 
     def __init__(self):
         """Guess."""
-        super(Guess, self).__init__(GUESS)
+        super(Guess, self).__init__(SUGGEST)
 
     def deserialize(self, obj):
         """TODO."""
         pass
 
 
-MessageInterface.register_message(Guess, GUESS)
+MessageInterface.register_message(Guess, SUGGEST)
 
 
 class Failure(Message):
