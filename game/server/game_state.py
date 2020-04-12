@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 class GameState:
     def __init__(self, rooms=None, weapons=None, suspects=None, hallways=None, secret_passages=None, starting_locs=None):
         # the Server object manages all incoming and outgoing messages between
-        # player clients and the server
-        # TODO: GameState will be controlled by GameServer, so after initializing all game attributes, drop references to Game Server and replace with class methods
-        self.GameServer = GameServer
+        # player clients and the server=
         
         # initialize game_board
         if not hallways:
