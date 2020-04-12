@@ -5,23 +5,23 @@ import logging
 import struct
 
 # Message functions
-# Guess and Suggest seem redundant, should they be merged?
 NULL = 0
 SUGGEST = 1
 ACCUSE = 2
 REFUTE = 3
 MOVE = 4
-UPDATE = 5
-DISPLAY = 6
-TURN = 7
-REGISTER = 8
-QUERY = 9
-START = 10
-SUCCESS = 12
-FAILURE = 13
-ENDTURN = 14
-VIEWHAND = 15
-VIEWMOVES = 16
+VIEWHAND = 5
+VIEWMOVES = 6
+UPDATE = 7
+DISPLAY = 8
+TURN = 9
+REGISTER = 10
+QUERY = 11
+START = 12
+ENDTURN = 13
+SUCCESS = 14
+FAILURE = 15
+ENDGAME = 16
 
 message_db = {}
 
@@ -331,21 +331,6 @@ class Start(Message):
 
 
 MessageInterface.register_message(Start, START)
-
-
-class Guess(Message):
-    """Guess."""
-
-    def __init__(self):
-        """Guess."""
-        super(Guess, self).__init__(SUGGEST)
-
-    def deserialize(self, obj):
-        """TODO."""
-        pass
-
-
-MessageInterface.register_message(Guess, SUGGEST)
 
 
 class Failure(Message):
