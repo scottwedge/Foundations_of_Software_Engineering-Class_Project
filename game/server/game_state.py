@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Implements game and board state functionality."""
 
 from time import sleep

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Multithreaded socket server."""
 
 import socket
@@ -123,7 +124,7 @@ class ThreadedServer(object):
         else:
             while self.setting_up_game:
                 # delay starting server loop until lobby leader starts game
-                MessageInterface.send_message(client, 'Currently waiting for lobby leader to start game')
+                MessageInterface.send_message(client, Display('Currently waiting for lobby leader to start game'))
                 sleep(15)
 
         # Run the game until end
@@ -201,7 +202,7 @@ class ThreadedServer(object):
                             # card name if refuted, None if no refutation made
 
                             if refute.function==REFUTE and refutation:
-                                MessageInterface.send_message(client, refutation)
+                                MessageInterface.send_message(client, Refutation(refutation))
 
                 elif msg.function == ACCUSE:
                     suspect = msg.player
@@ -209,15 +210,20 @@ class ThreadedServer(object):
                     loc = msg.location
                     resp = make_accusation(character, weapon, suspect, loc)
 
-                    resp.send_broadcast(self.connections, Display(resp['message']))
+                    MessageInterface.send_broadcast(self.connections, Display(resp['message']))
 
                     if resp['status'] is 'Incorrect':
                         self.connections.remove((character, client))
                         client.close()
                         return False
                     else:
-                        # TODO: Insert shutdown sequence here
-                        pass
+                        # End the game now that someone has won. The EndGame
+                        # message initiates a shutdown sequence in each client
+                        MessageInterface.send_broadcast(self.connections, EndGame())
+                        sleep(5) # delay to ensure shutdown message arrives
+                        self.connections.remove((character, client))
+                        client.close()
+                        return False
 
                 elif msg.function == ENDTURN:
                     self.turn = (self.turn + 1) % len(self.connections)

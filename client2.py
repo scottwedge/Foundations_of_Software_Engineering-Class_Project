@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Single threaded client."""
 
 import socket

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Message protocol."""
 
 import json
@@ -333,19 +334,19 @@ class Start(Message):
 MessageInterface.register_message(Start, START)
 
 
-class Failure(Message):
-    """Failure."""
+class EndTurn(Message):
+    """End turn."""
 
     def __init__(self):
-        """Fail."""
-        super(Failure, self).__init__(FAILURE)
+        """End turn."""
+        super(EndTurn, self).__init__(ENDTURN)
 
     def deserialize(self, obj):
         """TODO."""
         pass
 
 
-MessageInterface.register_message(Failure, FAILURE)
+MessageInterface.register_message(EndTurn, ENDTURN)
 
 
 class Success(Message):
@@ -364,16 +365,31 @@ class Success(Message):
 MessageInterface.register_message(Success, SUCCESS)
 
 
-class EndTurn(Message):
-    """End turn."""
+class Failure(Message):
+    """Failure."""
 
     def __init__(self):
-        """End turn."""
-        super(EndTurn, self).__init__(ENDTURN)
+        """Fail."""
+        super(Failure, self).__init__(FAILURE)
 
     def deserialize(self, obj):
         """TODO."""
         pass
 
 
-MessageInterface.register_message(EndTurn, ENDTURN)
+MessageInterface.register_message(Failure, FAILURE)
+
+
+class EndGame(Message):
+    """End the game by sending a termination order to each client."""
+
+    def __init__(self):
+        """End turn."""
+
+        super(EndGame, self).__init__(ENDGAME)
+    def deserialize(self, obj):
+        """TODO."""
+        pass
+
+
+MessageInterface.register_message(EndGame, ENDGAME)

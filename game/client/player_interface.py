@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Interface to support player actions."""
 
 import logging
