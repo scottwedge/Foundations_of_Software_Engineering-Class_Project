@@ -68,7 +68,7 @@ class MessageInterface:
     @staticmethod
     def recv_message(sock):
         """
-        Recieve a message.
+        Receive a message.
 
         Requires a valid socket object and bytes length to accept. Will return
         a valid object.
@@ -79,7 +79,7 @@ class MessageInterface:
         # Pull out the message size
         (length,) = struct.unpack("!I", msgsize)
 
-        # Recieve the message
+        # Receive the message
         msg = sock.recv(length).decode("utf-8")
         msg = json.loads(msg)
 
