@@ -381,7 +381,11 @@ MessageInterface.register_message(Failure, FAILURE)
 
 
 class EndGame(Message):
-    """End the game by sending a termination order to each client."""
+    """
+    End the game by sending a termination order to each client. This message
+    can also be sent from the client to the server to close the server loop
+    in that client.
+    """
 
     def __init__(self):
         """End turn."""

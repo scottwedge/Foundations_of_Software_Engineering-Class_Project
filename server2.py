@@ -234,6 +234,11 @@ class ThreadedServer(object):
                     player = self.connections[self.turn][0]
                     MessageInterface.send_broadcast(self.connections, Turn(player))
 
+                elif msg.function == ENDGAME:
+                    self.connections.remove((character, client)) # probably redundant but can be useful if a player exits the game unexpectedly
+                    client.close()
+                    return False
+
             except SystemError:
                 client.close()
                 return False
